@@ -1,0 +1,223 @@
+#!/bin/bash
+# cakein: download cakephp from github to a specified folder
+readonly DS="/"
+readonly REPO="https://github.com/cakephp/cakephp.git"
+readonly CAKEIN_VER="0.1"
+readonly ARG=$1
+readonly VER=$2
+readonly PNAME=$3
+readonly currdir=$(pwd)
+declare -a CmdLst=('help' 'new' 'up' 'ver' 'status')
+declare -a VerLst=('1.2' '1.3' '2.0' '2.1' '2.2')
+
+usage() {
+echo "
+Cakein by Maldicore Group Pvt Ltd (http://www.maldicore.com) 
+Copyright 2012, Sep 23. License GNU 3.0
+
+Usage: 		cakein OPTION [VERSION] [PROJECT]
+Example: 	cakein new 2.2 mycake
+
+OPTIONS:
+	help		show this help screen
+	new 		install fresh new cake installation
+	up		upgrade an installation
+	status		check current cakephp version
+	ver 		show cakein version information
+
+VERSION:
+	cakephp versions: ${VerLst[@]}
+
+PROJECT:
+	project directory name
+"
+}
+
+helpecho(){
+	echo "Type 'cakein help' for usage information"
+}
+
+version_show(){
+	echo "cakein version $CAKEIN_VER"
+	exit 1
+}
+
+#check if element exist in array
+in_array(){
+	local needle=$1; shift
+    for item; do
+        [[ "$needle" == $item ]] && return 0
+    done
+    return 1
+}
+
+git_fetch_tags(){
+	git fetch --tags
+}
+
+check_git(){
+	gitexist=$(which git)
+	if [ -z "$gitexist" ]; then
+		echo "git not installed:
+		try sudo apt-get install git
+		or sudo yum install git"
+		exit 1
+	fi
+}
+
+exe_install(){
+	echo "Cloning cakephp version $VER into project $currdir$DS$PNAME"
+	check_git
+	eval "$gitexist clone $REPO $PNAME"
+	folder_exist "$PNAME" "up"
+	cd $PNAME
+	cake_latest_ver
+	echo "Switching to the latest minor version $latestver"
+	eval "$gitexist checkout -q $latestver"
+	exit 1
+}
+
+cake_latest_ver(){
+	tags=$($gitexist tag | grep -e ^$VER)
+	for i in $tags;do
+		 latestver=$i
+	done
+}
+
+check_cake_dir(){
+	git_remote_v=$(git remote -v)
+	if [[ "$git_remote_v" == *cakephp.git* ]];then
+		#a cakephp repo
+		return 1
+	else
+		echo "Error:		Not a cakephp repository clone"
+		exit 1
+	fi
+}
+
+check_cake_ver(){
+	cake_version=$(git describe)
+}
+
+check_git_dir(){
+	if [ -d .git ];then
+		check_cake_dir
+	else
+		echo "Error:		not a git repository"
+		exit 1
+	fi
+}
+
+exe_upgrade(){
+	check_git_dir
+	check_git
+	check_cake_ver
+	cake_latest_ver
+	if [ $cake_version == $latestver ];then
+		echo "You have the latest CakePHP version: $cake_version"
+		exit 1
+	fi
+	if [ ${cake_version%.*} -gt ${latestver%.*} ];then
+		echo "Strange: Your Cake is $cake_version, better than CakePHP"
+		exit 1
+	else
+		#Need more testing on this one! Currently only update a cakephp
+		#repo clone, which is not practical as it would be replaced by
+		#a custom repo in any development case. TODO:
+		#- check if a cakephp project based on cake folder
+		#- check version based on cake version file
+		#- upgrade the cake folder as required
+		echo "Upgrading to the latest version of CakePHP: $latestver"
+		eval "$gitexist checkout -q $latestver"
+		git_fetch_tags
+		check_cake_ver
+		echo "Successfully upgraded to CakePHP version: $cake_version"
+	fi
+	exit 1
+}
+
+exe_status(){
+	check_git_dir
+	check_cake_ver
+	echo "Project: $currdir"
+	echo "Current Project CakePHP Version: $cake_version"
+}
+
+error_noarg(){
+	local EARG=$1
+	echo "Error:		$EARG is not a valid command"
+	usage 
+	exit 1
+}
+
+error_nover(){
+	local EARG=$1
+	if [ -z $EARG ]; then
+		echo "Error:		Indicate which version of cakephp you want to upgrade the current folder"
+	else
+		echo "Error:		$EARG is not a valid version number"
+	fi
+	helpecho
+	exit 1
+}
+
+folder_exist(){
+	local EARG=$1
+	local CHK=$2
+	if [ -d "$EARG" ]; then
+		if [ $CHK == "new" ];then
+			echo "Error:		install project directory $EARG already exist"
+			helpecho
+			exit 1
+		fi
+	else
+		if [ $CHK == "up" ];then
+			echo "Error:		upgrade project $EARG DONOT exist"
+			helpecho
+			exit 1	
+		fi
+	fi
+	
+	
+}
+
+in_array "$ARG" "${CmdLst[@]}" || error_noarg $ARG
+if [ $ARG == 'up' -o $ARG == 'new' ]; then
+	in_array "$VER" "${VerLst[@]}" || error_nover $VER
+fi
+
+if [ $1 == 'help' ]; then
+	usage
+	exit 1
+fi
+
+if [ $1 == 'ver' ]; then
+	version_show
+	exit 1
+fi
+
+if [ "$ARG" == "status" ]; then
+	folder_exist $currdir "up"
+	exe_status
+	exit 1
+fi
+
+main(){
+	# if not enough commands given exit
+	if [ $# -gt 1 ]; then
+		
+		if [ "$ARG" == "new" ]; then
+			folder_exist "$PNAME" "new"
+			exe_install
+		fi
+
+		if [ "$ARG" == "up" ]; then
+			folder_exist $currdir "up"
+			exe_upgrade
+		fi
+	else
+		usage
+		exit 1
+	fi
+}
+main "$@"
