@@ -8,7 +8,7 @@ readonly VER=$2
 readonly PNAME=$3
 readonly currdir=$(pwd)
 declare -a CmdLst=('help' 'new' 'up' 'ver' 'status')
-declare -a VerLst=('1.2' '1.3' '2.0' '2.1' '2.2')
+declare -a VerLst=('1.2' '1.3' '2.0' '2.1' '2.2', '2.3')
 
 usage() {
 echo "
@@ -16,7 +16,7 @@ Cakein by Maldicore Group Pvt Ltd (http://www.maldicore.com)
 Copyright 2012, Sep 23. License GNU 3.0
 
 Usage: 		cakein OPTION [VERSION] [PROJECT]
-Example: 	cakein new 2.2 mycake
+Example: 	cakein new 2.3 mycake
 
 OPTIONS:
 	help		show this help screen
