@@ -2,7 +2,7 @@
 # cakein: download cakephp from github to a specified folder
 readonly DS="/"
 readonly REPO="https://github.com/cakephp/cakephp.git"
-readonly CAKEIN_VER="0.1"
+readonly CAKEIN_VER="0.1.1"
 readonly ARG=$1
 readonly VER=$2
 readonly PNAME=$3
